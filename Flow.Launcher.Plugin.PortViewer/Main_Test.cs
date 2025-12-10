@@ -20,6 +20,12 @@ public class Main_Test
         {
             Console.WriteLine(
                 $"ProcessId: {conn.ProcessId} .LocalAddress: {conn.LocalAddress}:{conn.LocalPort}, RemotePort: {conn.RemotePort}. State: {conn.State}");
+            var pi = WindowsApi.GetProcessInfo(conn.ProcessId);
+            if (pi != null)
+            {
+                Console.WriteLine(
+                    $"ProcessInfo. Name: {pi.Name}. CommandLine: {pi.CommandLine}");
+            }
         }
     }
 

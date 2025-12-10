@@ -1,6 +1,10 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Net;
 using System.Runtime.InteropServices;
+using Flow.Launcher.Plugin.PortViewer.Util;
+using JetBrains.Annotations;
 
 namespace Flow.Launcher.Plugin.PortViewer;
 
@@ -135,5 +139,35 @@ public class WindowsApi
         // return IPAddress.NetworkToHostOrder((short)port);
         ushort newPort = (ushort)IPAddress.NetworkToHostOrder((short)(port & 0xFFFF));
         return newPort;
+    }
+
+    [CanBeNull]
+    public static ProcessInfo GetProcessInfo(int pid)
+    {
+        try
+        {
+            var p = Process.GetProcessById(pid);
+
+            return new ProcessInfo
+            {
+                Pid = pid,
+                Name = p.ProcessName,
+                FilePath = p.MainModule?.FileName,
+                StartTime = p.StartTime,
+                MemoryUsage = p.WorkingSet64,
+                CpuUsage = p.TotalProcessorTime,
+                SessionId = p.SessionId
+            };
+        }
+        catch (Win32Exception win32Ex)
+        {
+            InnerLogger.Logger.Debug($"FailedWin32GetProcessInfo. PID={pid}. {win32Ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            InnerLogger.Logger.Error($"FailedGetProcessInfo. PID={pid}. {ex.Message}");
+        }
+
+        return null;
     }
 }

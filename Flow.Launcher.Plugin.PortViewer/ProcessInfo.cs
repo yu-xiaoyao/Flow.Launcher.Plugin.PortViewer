@@ -12,4 +12,6 @@ public class ProcessInfo
     public DateTime? StartTime { get; set; }
     public long MemoryUsage { get; set; } // Bytes
     public TimeSpan? CpuUsage { get; set; }
+
+    public int SessionId { get; set; }
 }
