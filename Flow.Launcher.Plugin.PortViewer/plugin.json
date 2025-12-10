@@ -1,0 +1,12 @@
+{
+    "ID": "AEE8A20C7A854A33A41A209B7D34D44C",
+    "ActionKeyword": "pv",
+    "Name": "PortViewer",
+    "Description": "Tcp udp port view process info",
+    "Author": "yu-xiaoyao",
+    "Version": "1.0.0",
+    "Language": "csharp",
+    "Website": "https://github.com/yu-xiaoyao/Flow.Launcher.Plugin.PortViewer",
+    "IcoPath": "Images\\PortViewer.png",
+    "ExecuteFileName": "Flow.Launcher.Plugin.PortViewer.dll"
+}
