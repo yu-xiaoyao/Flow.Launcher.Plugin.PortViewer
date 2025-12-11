@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Flow.Launcher.Plugin.PortViewer.Util;
 
 namespace Flow.Launcher.Plugin.PortViewer;
@@ -31,7 +32,7 @@ public class Main_Test
 
     private static void test_get_udp_listener()
     {
-        var connections = SocketHelper.GetAllUdp6Connections();
+        var connections = SocketHelper.GetAllUdpConnections();
         foreach (var conn in connections)
         {
             Console.WriteLine(

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net;
@@ -15,9 +16,53 @@ public enum QueryAddressType
 
 public class SocketHelper
 {
+    public static List<(SocketInfo, ProcessInfo)> GetListenerPortProcess()
+    {
+        var processDict = new Dictionary<int, ProcessInfo?>();
+
+        var tcpConnections = GetTcpListenerConnections();
+
+        var cpList = new List<(SocketInfo, ProcessInfo)>();
+
+        foreach (var tcpConnection in tcpConnections)
+        {
+            var pid = tcpConnection.ProcessId;
+            if (pid <= 0) continue;
+
+            if (!processDict.TryGetValue(pid, out var processInfo))
+            {
+                processInfo = WindowsApi.GetProcessInfo(pid) ?? new ProcessInfo
+                {
+                    Pid = pid
+                };
+                processDict[pid] = processInfo;
+            }
+
+            cpList.Add((tcpConnection, processInfo));
+        }
+
+        var udpConnections = GetAllUdpConnections();
+
+
+        return cpList;
+    }
+
     public static List<TcpConnectionInfo> GetAllTcpConnections(QueryAddressType address = QueryAddressType.All)
     {
-        return GetTcpConnections(TcpTableClass.TcpTableOwnerPidAll);
+        var connections = new List<TcpConnectionInfo>();
+        if (address is QueryAddressType.IpV4 or QueryAddressType.All)
+        {
+            var list = GetTcpConnections(TcpTableClass.TcpTableOwnerPidAll);
+            connections.AddRange(list);
+        }
+
+        if (address is QueryAddressType.IpV6 or QueryAddressType.All)
+        {
+            var list = GetTcp6Connections(TcpTableClass.TcpTableOwnerPidAll);
+            connections.AddRange(list);
+        }
+
+        return connections;
     }
 
     public static List<TcpConnectionInfo> GetTcpListenerConnections(QueryAddressType address = QueryAddressType.All)
@@ -131,8 +176,25 @@ public class SocketHelper
         return result;
     }
 
+    public static List<SocketInfo> GetAllUdpConnections(QueryAddressType address = QueryAddressType.All)
+    {
+        var connections = new List<SocketInfo>();
+        if (address is QueryAddressType.IpV4 or QueryAddressType.All)
+        {
+            var list = GetUdpConnections();
+            connections.AddRange(list);
+        }
 
-    public static List<SocketInfo> GetAllUdpConnections()
+        if (address is QueryAddressType.IpV6 or QueryAddressType.All)
+        {
+            var list = GetUdp6Connections();
+            connections.AddRange(list);
+        }
+
+        return connections;
+    }
+
+    public static List<SocketInfo> GetUdpConnections()
     {
         var result = new List<SocketInfo>();
         int buffSize = 0;
@@ -174,7 +236,7 @@ public class SocketHelper
         return result;
     }
 
-    public static List<SocketInfo> GetAllUdp6Connections()
+    public static List<SocketInfo> GetUdp6Connections()
     {
         var result = new List<SocketInfo>();
         int buffSize = 0;

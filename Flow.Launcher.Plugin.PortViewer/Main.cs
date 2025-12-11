@@ -1,6 +1,5 @@
-using System;
 using System.Collections.Generic;
-using Flow.Launcher.Plugin;
+using System.Linq;
 
 namespace Flow.Launcher.Plugin.PortViewer
 {
@@ -15,6 +14,21 @@ namespace Flow.Launcher.Plugin.PortViewer
 
         public List<Result> Query(Query query)
         {
+            if (string.IsNullOrEmpty(query.Search))
+            {
+                var sps = SocketHelper.GetListenerPortProcess();
+                return _buildResults(sps);
+            }
+
+            var firstSearch = query.FirstSearch;
+
+            return new List<Result>();
+        }
+
+
+        private List<Result> _buildResults(List<(SocketInfo, ProcessInfo)> sps)
+        {
+            var socketInfos = sps.Select(f => f.Item1).ToList();
             return new List<Result>();
         }
     }
