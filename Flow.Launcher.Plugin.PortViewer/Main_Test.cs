@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Flow.Launcher.Plugin.PortViewer.Util;
 
 namespace Flow.Launcher.Plugin.PortViewer;
@@ -21,7 +20,7 @@ public class Main_Test
         {
             Console.WriteLine(
                 $"ProcessId: {conn.ProcessId} .LocalAddress: {conn.LocalAddress}:{conn.LocalPort}, RemotePort: {conn.RemotePort}. State: {conn.State}");
-            var pi = WindowsApi.GetProcessInfo(conn.ProcessId);
+            var pi = ProcessHelper.GetProcessInfo(conn.ProcessId);
             if (pi != null)
             {
                 Console.WriteLine(

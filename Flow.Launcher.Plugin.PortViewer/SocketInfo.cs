@@ -2,8 +2,21 @@
 
 namespace Flow.Launcher.Plugin.PortViewer;
 
+public enum SocketType
+{
+    Tcp,
+    Udp
+}
+
+public enum IpType
+{
+    Ipv4,
+    Ipv6
+}
+
 public class SocketInfo
 {
+    public IpType IpType { get; set; }
     public int ProcessId { get; set; }
 
     public IPAddress LocalAddress { get; set; }

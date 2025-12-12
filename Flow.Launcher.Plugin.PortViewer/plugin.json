@@ -2,7 +2,7 @@
     "ID": "AEE8A20C7A854A33A41A209B7D34D44C",
     "ActionKeyword": "pv",
     "Name": "PortViewer",
-    "Description": "Tcp udp port view process info",
+    "Description": "View the Tcp or udp port process info and kill the process",
     "Author": "yu-xiaoyao",
     "Version": "1.0.0",
     "Language": "csharp",

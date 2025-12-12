@@ -1,35 +1,155 @@
+using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
+using Flow.Launcher.Plugin.PortViewer.Util;
 
 namespace Flow.Launcher.Plugin.PortViewer
 {
-    public class PortViewer : IPlugin
+    public class PortViewer : IPlugin, IContextMenu
     {
+        public const string IconPath = "Images\\PortViewer.png";
+
         private PluginInitContext _context;
+        private Settings _settings;
 
         public void Init(PluginInitContext context)
         {
+            InnerLogger.SetAsFlowLauncherLogger(context.API, LoggerLevel.DEBUG);
+
             _context = context;
+            _settings = _context.API.LoadSettingJsonStorage<Settings>();
         }
 
         public List<Result> Query(Query query)
         {
-            if (string.IsNullOrEmpty(query.Search))
-            {
-                var sps = SocketHelper.GetListenerPortProcess();
-                return _buildResults(sps);
-            }
+            // InnerLogger.Logger.Info($"FirstSearch: {query.FirstSearch}");
 
             var firstSearch = query.FirstSearch;
 
-            return new List<Result>();
+            var filterString = "";
+            SocketType? socketType = null;
+
+            if (!string.IsNullOrEmpty(firstSearch))
+            {
+                if (string.Equals(nameof(SocketType.Tcp), firstSearch, StringComparison.OrdinalIgnoreCase))
+                {
+                    socketType = SocketType.Tcp;
+                    filterString = query.SecondToEndSearch;
+                }
+                else if (string.Equals(nameof(SocketType.Udp), firstSearch, StringComparison.OrdinalIgnoreCase))
+                {
+                    socketType = SocketType.Udp;
+                    filterString = query.SecondToEndSearch;
+                }
+                else
+                    filterString = firstSearch;
+            }
+
+            // InnerLogger.Logger.Info($"socketType: {socketType}. filterString: {filterString}");
+
+            var isResolveProcessName = _settings.ResolveProcessName;
+            var queryInfoList = SocketHelper.GetListenerPortProcess(socketType);
+
+            // queryInfoList = queryInfoList.Where(x => x.Item1.ProcessId > 10).ToList();
+
+            var results = new List<Result>();
+
+            foreach (var (socketInfo, processInfo) in queryInfoList)
+            {
+                var localAddress = socketInfo.IpType == IpType.Ipv6
+                    ? $"[{socketInfo.LocalAddress}]"
+                    : socketInfo.LocalAddress.ToString();
+
+                string title;
+                if (isResolveProcessName)
+                {
+                    title = string.IsNullOrEmpty(processInfo.Name)
+                        ? $"{localAddress}:{socketInfo.LocalPort}"
+                        : $"{localAddress}:{socketInfo.LocalPort} - {processInfo.Name}";
+                }
+                else
+                    title = $"{localAddress}:{socketInfo.LocalPort}";
+
+                if (!string.IsNullOrEmpty(filterString))
+                {
+                    if (!title.Contains(filterString))
+                        continue;
+                }
+
+                var protocol = socketInfo is TcpConnectionInfo ? "TCP" : "UDP";
+
+                var subTitle = $"{protocol}. PID: {processInfo.Pid}";
+                if (socketInfo is TcpConnectionInfo tcpConnectionInfo)
+                {
+                    subTitle += $". {tcpConnectionInfo.StateString}";
+                }
+
+                if (!string.IsNullOrEmpty(processInfo.FilePath))
+                {
+                    subTitle += $". {processInfo.FilePath}";
+                }
+
+
+                var path = ProcessHelper.TryGetProcessFilename(socketInfo.ProcessId);
+                if (string.IsNullOrEmpty(path))
+                    path = IconPath;
+
+                results.Add(new Result
+                {
+                    Title = title,
+                    SubTitle = subTitle,
+                    AutoCompleteText = $"{query.ActionKeyword} {title}",
+                    IcoPath = path,
+                    Action = _ =>
+                    {
+                        _context.API.ChangeQuery($"{query.ActionKeyword} {title}");
+                        return false;
+                    },
+                    ContextData = new Tuple<SocketInfo, ProcessInfo>(socketInfo, processInfo)
+                });
+            }
+
+            return results;
         }
 
-
-        private List<Result> _buildResults(List<(SocketInfo, ProcessInfo)> sps)
+        public List<Result> LoadContextMenus(Result selectedResult)
         {
-            var socketInfos = sps.Select(f => f.Item1).ToList();
-            return new List<Result>();
+            InnerLogger.Logger.Info($"LoadContextMenus: {selectedResult.Title}");
+            var (socketInfo, processInfo) = (Tuple<SocketInfo, ProcessInfo>)selectedResult.ContextData;
+            var path = ProcessHelper.TryGetProcessFilename(socketInfo.ProcessId);
+            if (string.IsNullOrEmpty(path))
+                path = IconPath;
+
+            return new List<Result>
+            {
+                new Result
+                {
+                    IcoPath = path,
+                    Title = $"Kill Process {processInfo.Pid}",
+                    // SubTitle = $"Kill Process {processInfo.Pid}",
+                    AsyncAction = async _ =>
+                    {
+                        await Task.Run(() => { _killProcessByPid(processInfo.Pid); });
+                        return true;
+                    },
+                    // Action = _ =>
+                    // {
+                    //     ProcessHelper.KillProcessByPid();
+                    //
+                    //     return true;
+                    // }
+                }
+            };
+        }
+
+        private void _killProcessByPid(int pid)
+        {
+            InnerLogger.Logger.Info($"KillProcessByPid: {pid}");
+            
+            var pi = ProcessHelper.GetProcessInfo(pid);
+            if (pi == null) return;
+            if (!ProcessHelper.KillProcessByPid(pid))
+                ProcessHelper.KillByPid(pid);
         }
     }
 }

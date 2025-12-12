@@ -14,4 +14,5 @@ public class ProcessInfo
     public TimeSpan? CpuUsage { get; set; }
 
     public int SessionId { get; set; }
+    
 }

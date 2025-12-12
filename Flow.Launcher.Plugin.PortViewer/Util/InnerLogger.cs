@@ -119,22 +119,22 @@ internal class FlowLauncherLogger : ILogger
 
     public void Debug(string message)
     {
-        _publicApi.LogDebug("ContainerManage", message);
+        _publicApi.LogDebug("PortViewer", message);
     }
 
     public void Info(string message)
     {
-        _publicApi.LogInfo("ContainerManage", message);
+        _publicApi.LogInfo("PortViewer", message);
     }
 
     public void Warn(string message)
     {
-        _publicApi.LogWarn("ContainerManage", message);
+        _publicApi.LogWarn("PortViewer", message);
     }
 
     public void Error(string message, Exception ex = null)
     {
-        _publicApi.LogException("ContainerManage", message, ex);
+        _publicApi.LogException("PortViewer", message, ex);
     }
 }
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net;
 using System.Runtime.InteropServices;
+using Flow.Launcher.Plugin.PortViewer.Util;
 
 namespace Flow.Launcher.Plugin.PortViewer;
 
@@ -16,33 +17,73 @@ public enum QueryAddressType
 
 public class SocketHelper
 {
-    public static List<(SocketInfo, ProcessInfo)> GetListenerPortProcess()
+    public static List<int> ExecuteTcpPort = new()
     {
-        var processDict = new Dictionary<int, ProcessInfo?>();
+        135, // RPC / DCOM / EPM 相关
+        445, // SMB
+    };
 
-        var tcpConnections = GetTcpListenerConnections();
+    public static List<int> ExecuteUdpPort = new()
+    {
+        53, // DNS
+        67, 68, // DHCP
+    };
 
+    public static List<(SocketInfo, ProcessInfo)> GetListenerPortProcess(
+        SocketType? socketType = null,
+        QueryAddressType address = QueryAddressType.All)
+    {
         var cpList = new List<(SocketInfo, ProcessInfo)>();
 
-        foreach (var tcpConnection in tcpConnections)
+        var processDict = new Dictionary<int, ProcessInfo>();
+
+        if (socketType is null or SocketType.Tcp)
         {
-            var pid = tcpConnection.ProcessId;
-            if (pid <= 0) continue;
-
-            if (!processDict.TryGetValue(pid, out var processInfo))
+            var tcpConnections = GetTcpListenerConnections(address);
+            foreach (var tcpConnection in tcpConnections)
             {
-                processInfo = WindowsApi.GetProcessInfo(pid) ?? new ProcessInfo
-                {
-                    Pid = pid
-                };
-                processDict[pid] = processInfo;
-            }
+                if (ExecuteTcpPort.Contains(tcpConnection.LocalPort))
+                    continue;
 
-            cpList.Add((tcpConnection, processInfo));
+                var pid = tcpConnection.ProcessId;
+                if (pid <= 0) continue;
+
+                if (!processDict.TryGetValue(pid, out var processInfo))
+                {
+                    processInfo = ProcessHelper.GetProcessInfo(pid) ?? new ProcessInfo
+                    {
+                        Pid = pid
+                    };
+                    processDict[pid] = processInfo;
+                }
+
+                cpList.Add((tcpConnection, processInfo));
+            }
         }
 
-        var udpConnections = GetAllUdpConnections();
+        if (socketType is null or SocketType.Udp)
+        {
+            var udpConnections = GetAllUdpConnections(address);
+            foreach (var udpConnection in udpConnections)
+            {
+                if (ExecuteUdpPort.Contains(udpConnection.LocalPort))
+                    continue;
 
+                var pid = udpConnection.ProcessId;
+                if (pid <= 0) continue;
+
+                if (!processDict.TryGetValue(pid, out var processInfo))
+                {
+                    processInfo = ProcessHelper.GetProcessInfo(pid) ?? new ProcessInfo
+                    {
+                        Pid = pid
+                    };
+                    processDict[pid] = processInfo;
+                }
+
+                cpList.Add((udpConnection, processInfo));
+            }
+        }
 
         return cpList;
     }
@@ -110,6 +151,7 @@ public class SocketHelper
 
                 result.Add(new TcpConnectionInfo
                 {
+                    IpType = IpType.Ipv4,
                     ProcessId = row.owningPid,
                     LocalAddress = new IPAddress(row.localAddr),
                     LocalPort = WindowsApi.ToHostOrderPort(row.localPort),
@@ -157,6 +199,7 @@ public class SocketHelper
 
                 result.Add(new TcpConnectionInfo
                 {
+                    IpType = IpType.Ipv6,
                     ProcessId = row.OwningPid,
                     LocalAddress = new IPAddress(row.LocalAddr),
                     LocalPort = WindowsApi.ToHostOrderPort(row.LocalPort),
@@ -220,6 +263,7 @@ public class SocketHelper
                 WindowsApi.MIB_UDPROW_OWNER_PID row = Marshal.PtrToStructure<WindowsApi.MIB_UDPROW_OWNER_PID>(rowPtr);
                 result.Add(new SocketInfo
                 {
+                    IpType = IpType.Ipv4,
                     ProcessId = row.owningPid,
                     LocalAddress = new IPAddress(row.localAddr),
                     LocalPort = WindowsApi.ToHostOrderPort(row.localPort),
@@ -262,6 +306,7 @@ public class SocketHelper
                 var row = Marshal.PtrToStructure<WindowsApi.MIB_UDP6ROW_OWNER_PID>(rowPtr);
                 result.Add(new SocketInfo
                 {
+                    IpType = IpType.Ipv6,
                     ProcessId = row.OwningPid,
                     LocalAddress = new IPAddress(row.LocalAddr),
                     LocalPort = WindowsApi.ToHostOrderPort(row.LocalPort),
