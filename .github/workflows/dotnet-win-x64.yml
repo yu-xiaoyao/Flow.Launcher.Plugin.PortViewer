@@ -1,0 +1,42 @@
+name: Build windows plugin package
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - '*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Install .NET SDK
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 9.0.x
+
+    - name: Setup MSBuild.exe
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Execute release.ps1
+      run: ./release.ps1
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      if: github.ref_type == 'tag'
+      with:
+        name: PortViewer
+        path: Flow.Launcher.Plugin.PortViewer/bin/PortViewer.zip
+
+    - name: Release artifacts
+      uses: softprops/action-gh-release@v2
+      if: github.ref_type == 'tag'
+      with:
+        files: Flow.Launcher.Plugin.PortViewer/bin/PortViewer.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
