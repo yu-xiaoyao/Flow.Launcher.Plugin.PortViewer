@@ -9,9 +9,12 @@ public class Main_Test
     {
         InnerLogger.SetAsConsoleLogger(LoggerLevel.DEBUG);
 
-        test_get_tcp_listener();
+        // test_get_tcp_listener();
         // test_get_udp_listener();
+
+        test_get_process_info();
     }
+
 
     private static void test_get_tcp_listener()
     {
@@ -36,6 +39,31 @@ public class Main_Test
         {
             Console.WriteLine(
                 $"ProcessId: \t{conn.ProcessId}\t LocalAddress: {conn.LocalAddress}:{conn.LocalPort}");
+        }
+    }
+
+
+    private static void test_get_process_info()
+    {
+        var pid = 26872;
+        var result = PsShellProcessHelper.GetCommandLineByPidPowershell(pid);
+
+        Console.WriteLine(result);
+        Console.WriteLine();
+
+
+        if (result != null)
+        {
+            var args = PsShellProcessHelper.SplitCommandList(result);
+
+            var startClass = JavaProcessorHelper.GetJavaLauncherClassByCommand(args);
+
+            Console.WriteLine($"startClass: {startClass}");
+
+            foreach (string arg in args)
+            {
+                Console.WriteLine(arg);
+            }
         }
     }
 }

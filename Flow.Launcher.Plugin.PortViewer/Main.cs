@@ -120,32 +120,79 @@ namespace Flow.Launcher.Plugin.PortViewer
             if (string.IsNullOrEmpty(path))
                 path = IconPath;
 
-            return new List<Result>
+            var results = new List<Result>
             {
-                new Result
+                new()
                 {
                     IcoPath = path,
                     Title = $"Kill Process {processInfo.Pid}",
-                    // SubTitle = $"Kill Process {processInfo.Pid}",
+                    SubTitle = $"{processInfo.Pid}",
+                    CopyText = $"{processInfo.Pid}",
                     AsyncAction = async _ =>
                     {
                         await Task.Run(() => { _killProcessByPid(processInfo.Pid); });
                         return true;
-                    },
-                    // Action = _ =>
-                    // {
-                    //     ProcessHelper.KillProcessByPid();
-                    //
-                    //     return true;
-                    // }
+                    }
+                },
+                new()
+                {
+                    IcoPath = path,
+                    Title = $"Copy PID {processInfo.Pid}",
+                    SubTitle = $"{processInfo.Pid}",
+                    CopyText = $"{processInfo.Pid}",
+                    Action = _ =>
+                    {
+                        _context.API.CopyToClipboard($"{processInfo.Pid}", false, false);
+                        return true;
+                    }
                 }
             };
+
+            var isJava = JavaProcessorHelper.IsJavaProcess(processInfo.FilePath);
+            if (isJava)
+            {
+                var commandLine = PsShellProcessHelper.GetCommandLineByPidPowershell(processInfo.Pid);
+                if (!string.IsNullOrEmpty(commandLine))
+                {
+                    results.Add(new Result()
+                    {
+                        IcoPath = path,
+                        Title = "Copy Java Command",
+                        SubTitle = commandLine,
+                        CopyText = commandLine,
+                        Action = _ =>
+                        {
+                            _context.API.CopyToClipboard(commandLine, false, false);
+                            return true;
+                        }
+                    });
+                    var commandList = PsShellProcessHelper.SplitCommandList(commandLine);
+                    var startClass = JavaProcessorHelper.GetJavaLauncherClassByCommand(commandList);
+                    if (!string.IsNullOrEmpty(startClass))
+                    {
+                        results.Add(new Result()
+                        {
+                            IcoPath = path,
+                            Title = "Copy Java Launcher Class",
+                            SubTitle = startClass,
+                            CopyText = startClass,
+                            Action = _ =>
+                            {
+                                _context.API.CopyToClipboard(startClass, false, false);
+                                return true;
+                            }
+                        });
+                    }
+                }
+            }
+
+            return results;
         }
 
         private void _killProcessByPid(int pid)
         {
             InnerLogger.Logger.Info($"KillProcessByPid: {pid}");
-            
+
             var pi = ProcessHelper.GetProcessInfo(pid);
             if (pi == null) return;
             if (!ProcessHelper.KillProcessByPid(pid))
