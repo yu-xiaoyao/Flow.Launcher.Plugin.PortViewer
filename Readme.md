@@ -39,3 +39,7 @@ pv udp 53
 #### Context Menu for kill process by Pid
 
 ![tcp listener port](Resources/context-kill.png)
+
+
+## CDN - jsdelivr
+- https://www.jsdelivr.com/github
